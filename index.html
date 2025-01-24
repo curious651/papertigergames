@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chinese Memory Game</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+      }
+      #startScreen,
+      #gameScreen {
+        text-align: center;
+      }
+      #wordList {
+        margin: 10px 0;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .word-pair {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px;
+        background-color: #e0e0e0;
+        margin: 5px 0;
+      }
+      #gameBoard {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .card {
+        width: 100px;
+        height: 100px;
+        background-color: #3498db;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 18px;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        text-align: center;
+      }
+      .card.matched {
+        background-color: #2ecc71;
+        cursor: default;
+      }
+      .card.flipped {
+        background-color: #2980b9;
+      }
+      #scoreBoard {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 20px;
+      }
+      #completionModal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      #completionContent {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      }
+      input {
+        margin: 5px;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="startScreen">
+      <h2>Chinese Memory Game Setup</h2>
+      <div id="wordInputs">
+        <input type="text" class="english-input" placeholder="English Word" />
+        <input
+          type="text"
+          class="chinese-input"
+          placeholder="Chinese Character"
+        />
+        <button onclick="addWord()">Add Word</button>
+      </div>
+      <div id="wordList"></div>
+      <button onclick="startGame()" id="startGameBtn" disabled>
+        Start Game
+      </button>
+    </div>
+
+    <div id="gameScreen" style="display: none">
+      <div id="scoreBoard">Matches: <span id="matchCount">0</span></div>
+      <div id="gameBoard"></div>
+      <button onclick="resetGame()" style="display: block; margin: 20px auto">
+        Reset Game
+      </button>
+    </div>
+
+    <div id="completionModal">
+      <div id="completionContent">
+        <h2>Well Done!</h2>
+        <p>You've matched all the words!</p>
+        <button onclick="closeModal()">Play Again</button>
+      </div>
+    </div>
+
+    <script>
+      const startScreen = document.getElementById("startScreen");
+      const gameScreen = document.getElementById("gameScreen");
+      const gameBoard = document.getElementById("gameBoard");
+      const scoreCountElement = document.getElementById("matchCount");
+      const startGameBtn = document.getElementById("startGameBtn");
+      const wordList = document.getElementById("wordList");
+      const englishInput = document.querySelector(".english-input");
+      const chineseInput = document.querySelector(".chinese-input");
+      const completionModal = document.getElementById("completionModal");
+
+      let words = [];
+      let flippedCards = [];
+      let matchedPairs = 0;
+      let totalPairs = 0;
+
+      function addWord() {
+        if (englishInput.value && chineseInput.value) {
+          const word = {
+            english: englishInput.value,
+            chinese: chineseInput.value,
+          };
+
+          words.push(word);
+
+          const wordPairElement = document.createElement("div");
+          wordPairElement.classList.add("word-pair");
+          wordPairElement.innerHTML = `
+                    <span>${word.english}</span>
+                    <span>${word.chinese}</span>
+                `;
+          wordList.appendChild(wordPairElement);
+
+          englishInput.value = "";
+          chineseInput.value = "";
+
+          startGameBtn.disabled = false;
+        }
+      }
+
+      function startGame() {
+        let gameWords = [];
+        words.forEach((word) => {
+          gameWords.push({ type: "english", value: word.english });
+          gameWords.push({ type: "chinese", value: word.chinese });
+        });
+        gameWords.sort(() => Math.random() - 0.5);
+
+        gameBoard.innerHTML = "";
+        matchedPairs = 0;
+        totalPairs = words.length;
+        scoreCountElement.textContent = "0";
+
+        gameWords.forEach((word) => {
+          const card = document.createElement("div");
+          card.classList.add("card");
+          card.dataset.type = word.type;
+          card.dataset.value = word.value;
+
+          card.addEventListener("click", () => flipCard(card));
+          gameBoard.appendChild(card);
+        });
+
+        startScreen.style.display = "none";
+        gameScreen.style.display = "block";
+      }
+
+      function flipCard(card) {
+        if (
+          card.classList.contains("matched") ||
+          card.classList.contains("flipped")
+        )
+          return;
+
+        card.textContent = card.dataset.value;
+        card.classList.add("flipped");
+        flippedCards.push(card);
+
+        if (flippedCards.length === 2) {
+          setTimeout(checkMatch, 1000);
+        }
+      }
+
+      function checkMatch() {
+        const [card1, card2] = flippedCards;
+
+        const card1Word = card1.dataset.value;
+        const card2Word = card2.dataset.value;
+        const card1Type = card1.dataset.type;
+        const card2Type = card2.dataset.type;
+
+        const sameWord = words.some(
+          (word) =>
+            (word.english === card1Word && word.chinese === card2Word) ||
+            (word.chinese === card1Word && word.english === card2Word)
+        );
+
+        if (sameWord && card1Type !== card2Type) {
+          card1.classList.add("matched");
+          card2.classList.add("matched");
+          matchedPairs++;
+          scoreCountElement.textContent = matchedPairs;
+
+          if (matchedPairs === totalPairs) {
+            setTimeout(() => {
+              completionModal.style.display = "flex";
+            }, 500);
+          }
+        } else {
+          card1.textContent = "";
+          card2.textContent = "";
+          card1.classList.remove("flipped");
+          card2.classList.remove("flipped");
+        }
+
+        flippedCards = [];
+      }
+
+      function resetGame() {
+        gameScreen.style.display = "none";
+        startScreen.style.display = "block";
+        completionModal.style.display = "none";
+        words = [];
+        wordList.innerHTML = "";
+        startGameBtn.disabled = true;
+      }
+
+      function closeModal() {
+        completionModal.style.display = "none";
+        resetGame();
+      }
+    </script>
+  </body>
+</html>
