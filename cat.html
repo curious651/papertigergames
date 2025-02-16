@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Kitty Character Puzzle</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-family: Arial, sans-serif;
+        background-color: #fff6f6;
+        color: #4a3636;
+      }
+
+      .game-container {
+        margin: 20px;
+        text-align: center;
+      }
+
+      h1 {
+        color: #ff9494;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      h1::before,
+      h1::after {
+        content: "🐱";
+        margin: 0 10px;
+      }
+
+      .input-section {
+        margin: 20px 0;
+        background-color: #ffe9e9;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      input {
+        font-size: 24px;
+        padding: 5px;
+        width: 100px;
+        border: 2px solid #ffb6b6;
+        border-radius: 8px;
+        background-color: white;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #ff9494;
+        box-shadow: 0 0 5px #ff9494;
+      }
+
+      button {
+        font-size: 16px;
+        padding: 8px 16px;
+        margin: 0 5px;
+        cursor: pointer;
+        background-color: #ff9494;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #ff7070;
+        transform: scale(1.05);
+      }
+
+      .puzzle-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 80px);
+        grid-template-rows: repeat(2, 80px);
+        gap: 3px;
+        margin: 20px auto;
+        background-color: #ff9494;
+        padding: 3px;
+        width: fit-content;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .puzzle-piece {
+        background-color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 100px;
+        cursor: pointer;
+        user-select: none;
+        width: 80px;
+        height: 80px;
+        border-radius: 5px;
+        transition: transform 0.2s ease;
+      }
+
+      .puzzle-piece:hover {
+        transform: scale(1.02);
+      }
+
+      .puzzle-piece.selected {
+        background-color: #ffe9e9;
+        box-shadow: 0 0 5px #ff9494;
+      }
+
+      .character-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .character {
+        position: absolute;
+        font-size: 160px;
+        line-height: 160px;
+        width: 160px;
+        height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .top-left .character {
+        top: 0;
+        left: 0;
+      }
+      .top-right .character {
+        top: 0;
+        left: -80px;
+      }
+      .bottom-left .character {
+        top: -80px;
+        left: 0;
+      }
+      .bottom-right .character {
+        top: -80px;
+        left: -80px;
+      }
+
+      .message {
+        margin: 20px 0;
+        font-size: 18px;
+        color: #4a3636;
+        padding: 10px;
+        border-radius: 10px;
+        background-color: #ffe9e9;
+        display: inline-block;
+      }
+
+      .paw-print {
+        font-size: 24px;
+        color: #ff9494;
+        position: fixed;
+        opacity: 0.6;
+      }
+
+      /* Add some random paw prints around the page */
+      .paw-print:nth-child(1) {
+        top: 10%;
+        left: 10%;
+        transform: rotate(45deg);
+      }
+      .paw-print:nth-child(2) {
+        top: 20%;
+        right: 15%;
+        transform: rotate(-30deg);
+      }
+      .paw-print:nth-child(3) {
+        bottom: 15%;
+        left: 20%;
+        transform: rotate(15deg);
+      }
+      .paw-print:nth-child(4) {
+        bottom: 25%;
+        right: 10%;
+        transform: rotate(-15deg);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Add decorative paw prints -->
+    <div class="paw-print">🐾</div>
+    <div class="paw-print">🐾</div>
+    <div class="paw-print">🐾</div>
+    <div class="paw-print">🐾</div>
+
+    <div class="game-container">
+      <h1>Kitty Character Puzzle</h1>
+      <div class="input-section">
+        <input
+          type="text"
+          id="characterInput"
+          maxlength="1"
+          placeholder="输入汉字"
+        />
+        <button onclick="startGame()">Start Purr-zle</button>
+        <button onclick="checkSolution()">Check Meow</button>
+      </div>
+      <div class="puzzle-grid" id="puzzleGrid"></div>
+      <div class="message" id="message"></div>
+    </div>
+
+    <script>
+      let originalCharacter = "";
+      let selectedPiece = null;
+      let pieces = [];
+      let positions = [0, 1, 2, 3];
+
+      const positionClasses = [
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+      ];
+      const catMessages = [
+        "Purrfect! You solved it! 😺",
+        "Not quite right, keep pawing at it! 🐱",
+        "Click two pieces to swap them, just like a cat playing with toys! 🐱",
+        "Meow! Please enter a character first! 😺",
+      ];
+
+      function startGame() {
+        const input = document.getElementById("characterInput");
+        originalCharacter = input.value;
+
+        if (!originalCharacter) {
+          showMessage(catMessages[3]);
+          return;
+        }
+
+        const grid = document.getElementById("puzzleGrid");
+        grid.innerHTML = "";
+        pieces = [];
+        positions = [0, 1, 2, 3];
+
+        for (let i = 0; i < 4; i++) {
+          const piece = document.createElement("div");
+          piece.className = "puzzle-piece";
+          piece.dataset.position = i;
+
+          const container = document.createElement("div");
+          container.className = `character-container ${positionClasses[i]}`;
+
+          const character = document.createElement("div");
+          character.className = "character";
+          character.textContent = originalCharacter;
+
+          container.appendChild(character);
+          piece.appendChild(container);
+
+          piece.addEventListener("click", () => selectPiece(piece));
+          pieces.push(piece);
+          grid.appendChild(piece);
+        }
+
+        shufflePieces();
+        showMessage(catMessages[2]);
+      }
+
+      function selectPiece(piece) {
+        if (selectedPiece === null) {
+          selectedPiece = piece;
+          piece.classList.add("selected");
+        } else if (selectedPiece !== piece) {
+          const pos1 = parseInt(selectedPiece.dataset.position);
+          const pos2 = parseInt(piece.dataset.position);
+
+          const container1 = selectedPiece.querySelector(
+            ".character-container"
+          );
+          const container2 = piece.querySelector(".character-container");
+          const tempClass = container1.className;
+          container1.className = container2.className;
+          container2.className = tempClass;
+
+          const tempPos = positions[pos1];
+          positions[pos1] = positions[pos2];
+          positions[pos2] = tempPos;
+
+          selectedPiece.classList.remove("selected");
+          selectedPiece = null;
+        }
+      }
+
+      function shufflePieces() {
+        for (let i = positions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [positions[i], positions[j]] = [positions[j], positions[i]];
+
+          const container1 = pieces[i].querySelector(".character-container");
+          const container2 = pieces[j].querySelector(".character-container");
+          const tempClass = container1.className;
+          container1.className = container2.className;
+          container2.className = tempClass;
+        }
+      }
+
+      function checkSolution() {
+        const isCorrect = positions.every((value, index) => value === index);
+        showMessage(isCorrect ? catMessages[0] : catMessages[1]);
+      }
+
+      function showMessage(text) {
+        document.getElementById("message").textContent = text;
+      }
+    </script>
+  </body>
+</html>
